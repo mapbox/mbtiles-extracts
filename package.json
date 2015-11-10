@@ -1,0 +1,18 @@
+{
+  "name": "mbtiles-extracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Vladimir Agafonkin",
+  "license": "ISC",
+  "dependencies": {
+    "mbtiles": "^0.8.2",
+    "queue-async": "^1.0.7",
+    "split": "^1.0.0",
+    "tilebelt": "^1.0.1",
+    "which-polygon": "^2.0.0"
+  }
+}

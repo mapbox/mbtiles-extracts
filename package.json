@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "mbtiles": "^0.8.2",
+    "mkdirp": "^0.5.1",
     "queue-async": "^1.0.7",
     "split": "^1.0.0",
     "tilebelt": "^1.0.1",

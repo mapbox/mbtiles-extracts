@@ -8,6 +8,7 @@ var tilebelt = require('tilebelt');
 var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
+var mkdirp = require('mkdirp');
 
 function extract(mbTilesPath, geojson) {
     var query = whichPoly(geojson);
@@ -99,9 +100,12 @@ function extract(mbTilesPath, geojson) {
 
     function writeExtract(name, done) {
         var subfolderName = path.basename(mbTilesPath, '.mbtiles');
-        var dirName = path.dirname(mbTilesPath);
-        var writePath = path.join(dirName, subfolderName, name);
+        var dirPath = path.dirname(mbTilesPath);
+        var subfolderPath = path.join(dirPath, subfolderName);
+        mkdirp.sync(subfolderPath);
+        var writePath = path.join(subfolderPath, name);
         extracts[name] = writeMBTiles(writePath, done);
+        return extracts[name];
     }
 
     function updateStatus() {

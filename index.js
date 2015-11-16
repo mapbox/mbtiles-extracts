@@ -9,6 +9,7 @@ var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
 var mkdirp = require('mkdirp');
+var through2 = require('through2');
 
 function extract(mbTilesPath, geojson) {
     var query = whichPoly(geojson);
@@ -24,7 +25,7 @@ function extract(mbTilesPath, geojson) {
     var db = new MBTiles(mbTilesPath, function (err, db) {
         if (err) throw err;
 
-        var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split());
+        var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split()).pipe(through2.obj());
         var ended = false;
 
         zxyStream.on('data', function (str) {

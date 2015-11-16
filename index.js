@@ -28,8 +28,19 @@ function extract(mbTilesPath, geojson, propName) {
 
         var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split()).pipe(through2.obj());
         var ended = false;
+        var creating = false;
+        var queue = {};
+        var writable = {};
 
-        zxyStream.on('data', function (str) {
+        zxyStream
+            .on('data', onData)
+            .on('end', onEnd);
+
+        function onEnd() {
+            ended = true;
+        }
+
+        function onData(str) {
 
             tilesGot++;
 
@@ -50,20 +61,27 @@ function extract(mbTilesPath, geojson, propName) {
             } else {
                 var extractName = toFileName(result[propName]);
 
-                if (extracts[extractName]) {
+                if (extracts[extractName] && writable[extractName]) {
                     saveTile(extracts[extractName], z, x, y);
 
                 } else {
-                    zxyStream.pause();
-                    writeExtract(extractName, function () {
-                        zxyStream.resume();
-                        saveTile(extracts[extractName], z, x, y);
-                    });
+
+                    queue[extractName] = queue[extractName] || [];
+                    queue[extractName].push([z, x, y]);
+
+                    if (!extracts[extractName]) {
+                        writeExtract(extractName, function () {
+                            writable[extractName] = true;
+
+                            while (queue[extractName].length) {
+                                var t = queue[extractName].pop();
+                                saveTile(extracts[extractName], t[0], t[1], t[2]);
+                            }
+                        });
+                    }
                 }
             }
-        }).on('end', function () {
-            ended = true;
-        });
+        }
 
         function saveTile(out, z, x, y) {
             db.getTile(z, x, y, function (err, data) {

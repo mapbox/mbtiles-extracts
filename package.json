@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "mbtiles-extracts": "mbtiles-extracts"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

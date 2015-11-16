@@ -11,9 +11,10 @@ var path = require('path');
 var mkdirp = require('mkdirp');
 var through2 = require('through2');
 
-function extract(mbTilesPath, geojson) {
-    var query = whichPoly(geojson);
+function extract(mbTilesPath, geojson, propName) {
+    if (!propName) throw new Error("Property name to extract by not provided.")
 
+    var query = whichPoly(geojson);
     var tilesGot = 0;
     var tilesDone = 0;
     var paused = false;
@@ -47,7 +48,7 @@ function extract(mbTilesPath, geojson) {
             if (!result) {
                 process.nextTick(tileSaved);
             } else {
-                var extractName = toFileName(result.admin);
+                var extractName = toFileName(result[propName]);
 
                 if (extracts[extractName]) {
                     saveTile(extracts[extractName], z, x, y);
@@ -95,6 +96,8 @@ function extract(mbTilesPath, geojson) {
 
             doneQ.await(function () {
                 clearInterval(timer);
+                updateStatus();
+                process.stderr.write('\n');
             });
         }
     });

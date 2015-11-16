@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+'use strict';
+
+var extract = require('./');
+var fs = require('fs');
+
+if (process.argv.length < 5) {
+	console.log('Usage: mbtiles-extracts <mbtiles path> <geojson path> <property name>');
+	return;
+}
+
+var mbtilesPath = process.argv[2];
+var geojsonPath = process.argv[3];
+var propName = process.argv[4];
+
+extract(mbtilesPath, JSON.parse(fs.readFileSync(geojsonPath)), propName);

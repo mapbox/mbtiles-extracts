@@ -8,7 +8,6 @@ var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
 var mkdirp = require('mkdirp');
-var through2 = require('through2');
 
 function extract(mbTilesPath, geojson, propName) {
     if (!propName) throw new Error('Property name to extract by not provided.');
@@ -25,7 +24,7 @@ function extract(mbTilesPath, geojson, propName) {
     var db = new MBTiles(mbTilesPath, function (err) {
         if (err) throw err;
 
-        var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split()).pipe(through2.obj());
+        var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split());
         var ended = false;
         var writeQueue = {};
         var writable = {};
@@ -36,6 +35,7 @@ function extract(mbTilesPath, geojson, propName) {
 
         function onEnd() {
             ended = true;
+            if (tilesDone === tilesGot) shutdown();
         }
 
         function onData(str) {
@@ -98,9 +98,7 @@ function extract(mbTilesPath, geojson, propName) {
                 zxyStream.resume();
             }
 
-            if (ended && tilesDone === tilesGot) {
-                shutdown();
-            }
+            if (ended && tilesDone === tilesGot) shutdown();
         }
 
         function shutdown() {
@@ -110,7 +108,8 @@ function extract(mbTilesPath, geojson, propName) {
             }
             doneQ.defer(db.close.bind(db));
 
-            doneQ.await(function () {
+            doneQ.await(function (err) {
+                if (err) throw err;
                 clearInterval(timer);
                 updateStatus();
                 process.stderr.write('\n');

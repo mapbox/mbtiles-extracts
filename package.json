@@ -16,7 +16,6 @@
     "mkdirp": "^0.5.1",
     "queue-async": "^1.0.7",
     "split": "^1.0.0",
-    "through2": "^2.0.0",
     "which-polygon": "^2.0.0"
   },
   "devDependencies": {

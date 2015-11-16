@@ -4,7 +4,6 @@ module.exports = extract;
 
 var MBTiles = require('mbtiles');
 var split = require('split');
-var tilebelt = require('tilebelt');
 var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
@@ -12,7 +11,7 @@ var mkdirp = require('mkdirp');
 var through2 = require('through2');
 
 function extract(mbTilesPath, geojson, propName) {
-    if (!propName) throw new Error("Property name to extract by not provided.")
+    if (!propName) throw new Error('Property name to extract by not provided.');
 
     var query = whichPoly(geojson);
     var tilesGot = 0;
@@ -23,13 +22,12 @@ function extract(mbTilesPath, geojson, propName) {
 
     var timer = setInterval(updateStatus, 64);
 
-    var db = new MBTiles(mbTilesPath, function (err, db) {
+    var db = new MBTiles(mbTilesPath, function (err) {
         if (err) throw err;
 
         var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split()).pipe(through2.obj());
         var ended = false;
-        var creating = false;
-        var queue = {};
+        var writeQueue = {};
         var writable = {};
 
         zxyStream
@@ -66,15 +64,15 @@ function extract(mbTilesPath, geojson, propName) {
 
                 } else {
 
-                    queue[extractName] = queue[extractName] || [];
-                    queue[extractName].push([z, x, y]);
+                    writeQueue[extractName] = writeQueue[extractName] || [];
+                    writeQueue[extractName].push([z, x, y]);
 
                     if (!extracts[extractName]) {
                         writeExtract(extractName, function () {
                             writable[extractName] = true;
 
-                            while (queue[extractName].length) {
-                                var t = queue[extractName].pop();
+                            while (writeQueue[extractName].length) {
+                                var t = writeQueue[extractName].pop();
                                 saveTile(extracts[extractName], t[0], t[1], t[2]);
                             }
                         });
@@ -152,13 +150,9 @@ function writeMBTiles(path, done) {
     return out;
 }
 
-function stopWriting(db, done) {
-    db.stopWriting(done);
-}
-
 function unproject(z, x, y) {
-  var z2 = Math.pow(2, z);
-  var lng = x * 360 / z2 - 180;
-  var lat = 360 / Math.PI * Math.atan(Math.exp((180 - y * 360 / z2) * Math.PI / 180)) - 90;
-  return [lng, lat];
+    var z2 = Math.pow(2, z);
+    var lng = x * 360 / z2 - 180;
+    var lat = 360 / Math.PI * Math.atan(Math.exp((180 - y * 360 / z2) * Math.PI / 180)) - 90;
+    return [lng, lat];
 }

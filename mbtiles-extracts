@@ -5,8 +5,8 @@ var extract = require('./');
 var fs = require('fs');
 
 if (process.argv.length < 5) {
-	console.log('Usage: mbtiles-extracts <mbtiles path> <geojson path> <property name>');
-	return;
+    console.log('Usage: mbtiles-extracts <mbtiles path> <geojson path> <property name>');
+    return;
 }
 
 var mbtilesPath = process.argv[2];

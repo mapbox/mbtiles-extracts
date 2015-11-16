@@ -7,7 +7,7 @@
     "mbtiles-extracts": "mbtiles-extracts"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "eslint index.js mbtiles-extracts"
   },
   "author": "Vladimir Agafonkin",
   "license": "ISC",
@@ -17,7 +17,13 @@
     "queue-async": "^1.0.7",
     "split": "^1.0.0",
     "through2": "^2.0.0",
-    "tilebelt": "^1.0.1",
     "which-polygon": "^2.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^1.9.0",
+    "eslint-config-mourner": "^1.0.1"
+  },
+  "eslintConfig": {
+  	"extends": "mourner"
   }
 }

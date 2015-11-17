@@ -7,6 +7,7 @@ var split = require('split');
 var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
+var sm = new (require('sphericalmercator'));
 var mkdirp = require('mkdirp');
 
 function extract(mbTilesPath, geojson, propName) {
@@ -18,6 +19,7 @@ function extract(mbTilesPath, geojson, propName) {
     var paused = false;
     var pauseLimit = 100;
     var extracts = {};
+    var meta = {};
 
     var timer = setInterval(updateStatus, 64);
 
@@ -28,6 +30,12 @@ function extract(mbTilesPath, geojson, propName) {
         var ended = false;
         var writeQueue = {};
         var writable = {};
+
+        db.getInfo(function (err, info) {
+            if (err) throw err;
+
+            meta = info;
+        });
 
         zxyStream
             .on('data', onData)
@@ -70,7 +78,6 @@ function extract(mbTilesPath, geojson, propName) {
                     if (!extracts[extractName]) {
                         writeExtract(extractName, function () {
                             writable[extractName] = true;
-
                             while (writeQueue[extractName].length) {
                                 var t = writeQueue[extractName].pop();
                                 saveTile(extracts[extractName], t[0], t[1], t[2]);
@@ -102,18 +109,32 @@ function extract(mbTilesPath, geojson, propName) {
         }
 
         function shutdown() {
-            var doneQ = queue();
-            for (var id in extracts) {
-                doneQ.defer(extracts[id].stopWriting.bind(extracts[id]));
-            }
-            doneQ.defer(db.close.bind(db));
+            var updateQ = queue();
 
-            doneQ.await(function (err) {
+            for (var id in extracts) {
+                updateQ.defer(updateInfo, extracts[id], id, meta);
+            }
+
+            updateQ.awaitAll(function (err, extracts) {
                 if (err) throw err;
-                clearInterval(timer);
-                updateStatus();
-                process.stderr.write('\n');
+
+                var doneQ = queue();
+                var length = extracts.length;
+                for (var i = 0; i < length; i++) {
+                    doneQ.defer(extracts[i].stopWriting.bind(extracts[i]));
+                }
+
+                doneQ.await(function (err) {
+                    if (err) throw err;
+
+                    clearInterval(timer);
+                    updateStatus();
+                    process.stderr.write('\n');
+                    db.close();
+                });
+
             });
+
         }
     });
 
@@ -154,4 +175,45 @@ function unproject(z, x, y) {
     var lng = x * 360 / z2 - 180;
     var lat = 360 / Math.PI * Math.atan(Math.exp((180 - y * 360 / z2) * Math.PI / 180)) - 90;
     return [lng, lat];
+}
+
+function updateInfo(mbtiles, name, info, callback) {
+    mbtiles._db.get(
+        'SELECT MAX(tile_column) AS maxx, ' +
+        'MIN(tile_column) AS minx, MAX(tile_row) AS maxy, ' +
+        'MIN(tile_row) AS miny FROM tiles ' +
+        'WHERE zoom_level = ?',
+        info.minzoom,
+        function(err, row) {
+            if (err) return callback(err);
+            if (!row) return callback(null, info);
+
+            // @TODO this breaks a little at zoom level zero
+            var urTile = sm.bbox(row.maxx, row.maxy, info.minzoom, true);
+            var llTile = sm.bbox(row.minx, row.miny, info.minzoom, true);
+            // @TODO bounds are limited to "sensible" values here
+            // as sometimes tilesets are rendered with "negative"
+            // and/or other extremity tiles. Revisit this if there
+            // are actual use cases for out-of-bounds bounds.
+
+            info.bounds = [
+                llTile[0] > -180 ? llTile[0] : -180,
+                llTile[1] > -90 ? llTile[1] : -90,
+                urTile[2] < 180 ? urTile[2] : 180,
+                urTile[3] < 90 ? urTile[3] : 90
+            ];
+
+            var range = info.maxzoom - info.minzoom;
+            info.center = [
+                (info.bounds[2] - info.bounds[0]) / 2 + info.bounds[0],
+                (info.bounds[3] - info.bounds[1]) / 2 + info.bounds[1],
+                range <= 1 ? info.maxzoom : Math.floor(range * 0.5) + info.minzoom
+            ];
+            info.name = info.description = info.basename = name;
+            mbtiles.putInfo(info, function (err) {
+                if (err) throw err;
+
+                return callback(null, mbtiles);
+            });
+        });
 }

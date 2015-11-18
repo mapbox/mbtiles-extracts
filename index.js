@@ -216,5 +216,6 @@ function updateInfo(mbtiles, name, info, callback) {
 
                 return callback(null, mbtiles);
             });
-        });
+        }
+    );
 }

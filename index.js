@@ -202,6 +202,7 @@ function updateInfo(mbtiles, name, info, callback) {
                 urTile[3] < 90 ? urTile[3] : 90
             ];
 
+            var numLayers = info.vector_layers.length;
             var range = info.maxzoom - info.minzoom;
             info.center = [
                 (info.bounds[2] - info.bounds[0]) / 2 + info.bounds[0],
@@ -209,7 +210,11 @@ function updateInfo(mbtiles, name, info, callback) {
                 range <= 1 ? info.maxzoom : Math.floor(range * 0.5) + info.minzoom
             ];
             info.name = info.description = info.basename = name;
-            info.vector_layers[0].fields = {};
+
+            for(var i = 0; i < numLayers; i++) {
+                info.vector_layers[i].fields = {};
+            }
+
             mbtiles.putInfo(info, function (err) {
                 if (err) throw err;
 

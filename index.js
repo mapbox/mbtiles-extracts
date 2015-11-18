@@ -31,12 +31,6 @@ function extract(mbTilesPath, geojson, propName) {
         var writeQueue = {};
         var writable = {};
 
-        db.getInfo(function (err, info) {
-            if (err) throw err;
-
-            meta = info;
-        });
-
         zxyStream
             .on('data', onData)
             .on('end', onEnd);
@@ -109,30 +103,35 @@ function extract(mbTilesPath, geojson, propName) {
         }
 
         function shutdown() {
-            var updateQ = queue();
 
-            for (var id in extracts) {
-                updateQ.defer(updateInfo, extracts[id], id, meta);
-            }
-
-            updateQ.awaitAll(function (err, extracts) {
+            db.getInfo(function (err, info) {
                 if (err) throw err;
 
-                var doneQ = queue();
-                var length = extracts.length;
-                for (var i = 0; i < length; i++) {
-                    doneQ.defer(extracts[i].stopWriting.bind(extracts[i]));
+
+                var updateQ = queue();
+                for (var id in extracts) {
+                    updateQ.defer(updateInfo, extracts[id], id, info);
                 }
 
-                doneQ.await(function (err) {
+                updateQ.awaitAll(function (err, extracts) {
                     if (err) throw err;
 
-                    clearInterval(timer);
-                    updateStatus();
-                    process.stderr.write('\n');
-                    db.close();
-                });
+                    var doneQ = queue();
+                    var length = extracts.length;
+                    for (var i = 0; i < length; i++) {
+                        doneQ.defer(extracts[i].stopWriting.bind(extracts[i]));
+                    }
 
+                    doneQ.await(function (err) {
+                        if (err) throw err;
+
+                        clearInterval(timer);
+                        updateStatus();
+                        process.stderr.write('\n');
+                        db.close();
+                    });
+
+                });
             });
 
         }

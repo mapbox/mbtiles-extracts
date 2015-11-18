@@ -210,6 +210,7 @@ function updateInfo(mbtiles, name, info, callback) {
                 range <= 1 ? info.maxzoom : Math.floor(range * 0.5) + info.minzoom
             ];
             info.name = info.description = info.basename = name;
+            info.vector_layers[0].fields = {};
             mbtiles.putInfo(info, function (err) {
                 if (err) throw err;
 

@@ -148,6 +148,8 @@ function extract(mbTilesPath, geojson, propName) {
     }
 
     function updateStatus() {
+        if (!process.stderr.cursorTo) return;
+
         process.stderr.cursorTo(0);
         process.stderr.write('tiles processed: ' + tilesDone);
     }

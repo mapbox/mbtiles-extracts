@@ -28,9 +28,9 @@ function extract(mbTilesPath, geojson, propName) {
         if (err) throw err;
 
 
-        var tiles = tilecover.tiles(geom, {min_zoom: 14, max_zoom: 14});
+        var tiles = tilecover.tiles(geojson.features[0], {min_zoom: 14, max_zoom: 14});
         for (var i = 13; i >= 0; i--) {
-            tiles= tiles.concat(tilecover.tiles(geom, {min_zoom: i, max_zoom: i}));
+            tiles= tiles.concat(tilecover.tiles(geojson.features[0], {min_zoom: i, max_zoom: i}));
         }
 
         tiles = tiles.map(function(tile) {

@@ -1,5 +1,4 @@
 'use strict';
-
 module.exports = extract;
 
 var MBTiles = require('mbtiles');
@@ -9,6 +8,8 @@ var queue = require('queue-async');
 var path = require('path');
 var sm = new (require('sphericalmercator'));
 var mkdirp = require('mkdirp');
+var tilecover = require('tile-cover');
+var streamarray = require('stream-array');
 
 function extract(mbTilesPath, geojson, propName) {
     if (!propName) throw new Error('Property name to extract by not provided.');
@@ -26,7 +27,18 @@ function extract(mbTilesPath, geojson, propName) {
     var db = new MBTiles(mbTilesPath, function (err) {
         if (err) throw err;
 
-        var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split());
+
+        var tiles = tilecover.tiles(geom, {min_zoom: 14, max_zoom: 14});
+        for (var i = 13; i >= 0; i--) {
+            tiles= tiles.concat(tilecover.tiles(geom, {min_zoom: i, max_zoom: i}));
+        }
+
+        tiles = tiles.map(function(tile) {
+            return tile[2]+'/'+tile[0]+'/'+tile[1]+'\n';
+        });
+        var zxyStream = streamarray(tiles).pipe(split());
+        //var zxyStream = db.createZXYStream({batch: pauseLimit}).pipe(split());
+
         var ended = false;
         var writeQueue = {};
         var writable = {};
@@ -41,7 +53,6 @@ function extract(mbTilesPath, geojson, propName) {
         }
 
         function onData(str) {
-
             tilesGot++;
 
             var tile = str.split('/');
@@ -84,7 +95,7 @@ function extract(mbTilesPath, geojson, propName) {
 
         function saveTile(out, z, x, y) {
             db.getTile(z, x, y, function (err, data) {
-                if (err) throw err;
+                if (err) {console.error(z,x,y); throw err;}
                 out.putTile(z, x, y, data, tileSaved);
             });
         }
@@ -103,7 +114,7 @@ function extract(mbTilesPath, geojson, propName) {
         }
 
         function shutdown() {
-
+            console.error(tilesGot, tilesDone)
             db.getInfo(function (err, info) {
                 if (err) throw err;
 

@@ -4,6 +4,10 @@ A tool to extract parts of an MBTiles file into separate files using a GeoJSON w
 
 Usage:
 
+```
+npm install mbtiles-extracts
+```
+
 ```bash
 $ mbtiles-extracts <MBTiles path> <GeoJSON path> <property name>
 ```

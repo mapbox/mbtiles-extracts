@@ -5,9 +5,10 @@ module.exports = extract;
 var MBTiles = require('mbtiles');
 var split = require('split');
 var whichPoly = require('which-polygon');
-var queue = require('queue-async');
+var Q = require('d3-queue');
 var path = require('path');
 var sm = new (require('sphericalmercator'));
+var tb = require('tilebelt');
 var mkdirp = require('mkdirp');
 
 function extract(mbTilesPath, geojson, propName) {
@@ -41,7 +42,6 @@ function extract(mbTilesPath, geojson, propName) {
         }
 
         function onData(str) {
-
             tilesGot++;
 
             var tile = str.split('/');
@@ -54,38 +54,51 @@ function extract(mbTilesPath, geojson, propName) {
                 paused = true;
             }
 
-            var result = query(unproject(z, x + 0.5, y + 0.5));
+            var result = query.bbox(tb.tileToBBOX([x,y,z]))
 
             if (!result) {
                 process.nextTick(tileSaved);
             } else {
-                var extractName = toFileName(result[propName]);
+                if (!Array.isArray(result)) result = [result];
 
-                if (extracts[extractName] && writable[extractName]) {
-                    saveTile(extracts[extractName], z, x, y);
+                var saveQ = Q.queue(1);
 
-                } else {
+                for (var result_it = 0; result_it < result.length; result_it++) {
+                    var extractName = toFileName(result[result_it][propName]);
 
-                    writeQueue[extractName] = writeQueue[extractName] || [];
-                    writeQueue[extractName].push([z, x, y]);
+                    if (extracts[extractName] && writable[extractName]) {
+                        saveQ.defer(saveTile, extracts[extractName], z, x, y);
 
-                    if (!extracts[extractName]) {
-                        writeExtract(extractName, function () {
-                            writable[extractName] = true;
-                            while (writeQueue[extractName].length) {
-                                var t = writeQueue[extractName].pop();
-                                saveTile(extracts[extractName], t[0], t[1], t[2]);
+                    } else {
+                        saveQ.defer(function(eName, done) {
+                            writeQueue[eName] = writeQueue[eName] || [];
+                            writeQueue[eName].push([z, x, y]);
+
+                            if (!extracts[eName]) {
+                                writeExtract(eName, function () {
+                                    writable[eName] = true;
+                                    var subsaveQ = Q.queue();
+                                    while (writeQueue[eName].length) {
+                                        var t = writeQueue[eName].pop();
+                                        subsaveQ.defer(saveTile, extracts[eName], t[0], t[1], t[2]);
+                                    }
+                                    subsaveQ.awaitAll(done);
+                                });
+                            } else {
+                                done();
                             }
-                        });
+                        }, extractName);
                     }
                 }
+                
+                saveQ.awaitAll(tileSaved);
             }
         }
 
-        function saveTile(out, z, x, y) {
+        function saveTile(out, z, x, y, done) {
             db.getTile(z, x, y, function (err, data) {
                 if (err) throw err;
-                out.putTile(z, x, y, data, tileSaved);
+                out.putTile(z, x, y, data, done);
             });
         }
 
@@ -108,7 +121,7 @@ function extract(mbTilesPath, geojson, propName) {
                 if (err) throw err;
 
 
-                var updateQ = queue();
+                var updateQ = Q.queue();
                 for (var id in extracts) {
                     updateQ.defer(updateInfo, extracts[id], id, info);
                 }
@@ -116,7 +129,7 @@ function extract(mbTilesPath, geojson, propName) {
                 updateQ.awaitAll(function (err, extracts) {
                     if (err) throw err;
 
-                    var doneQ = queue();
+                    var doneQ = Q.queue();
                     var length = extracts.length;
                     for (var i = 0; i < length; i++) {
                         doneQ.defer(extracts[i].stopWriting.bind(extracts[i]));
@@ -169,13 +182,6 @@ function writeMBTiles(path, done) {
         done(null, out);
     }
     return out;
-}
-
-function unproject(z, x, y) {
-    var z2 = Math.pow(2, z);
-    var lng = x * 360 / z2 - 180;
-    var lat = 360 / Math.PI * Math.atan(Math.exp((180 - y * 360 / z2) * Math.PI / 180)) - 90;
-    return [lng, lat];
 }
 
 function updateInfo(mbtiles, name, info, callback) {

@@ -12,12 +12,13 @@
   "author": "Vladimir Agafonkin",
   "license": "ISC",
   "dependencies": {
+    "d3-queue": "^3.0.3",
     "mbtiles": "^0.8.2",
     "mkdirp": "^0.5.1",
-    "queue-async": "^1.0.7",
     "sphericalmercator": "^1.0.4",
     "split": "^1.0.0",
-    "which-polygon": "^2.0.0"
+    "tilebelt": "^1.0.1",
+    "which-polygon": "2.1.0"
   },
   "devDependencies": {
     "eslint": "^1.9.0",

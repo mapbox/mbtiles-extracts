@@ -7,8 +7,10 @@ var split = require('split');
 var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
-var sm = new (require('sphericalmercator'));
+var SphericalMercator = require('sphericalmercator');
 var mkdirp = require('mkdirp');
+
+var sm = new SphericalMercator();
 
 function extract(mbTilesPath, geojson, propName) {
     if (!propName) throw new Error('Property name to extract by not provided.');
@@ -19,7 +21,6 @@ function extract(mbTilesPath, geojson, propName) {
     var paused = false;
     var pauseLimit = 100;
     var extracts = {};
-    var meta = {};
 
     var timer = setInterval(updateStatus, 64);
 
@@ -185,9 +186,15 @@ function updateInfo(mbtiles, name, info, callback) {
         'MIN(tile_row) AS miny FROM tiles ' +
         'WHERE zoom_level = ?',
         info.minzoom,
-        function(err, row) {
-            if (err) return callback(err);
-            if (!row) return callback(null, info);
+        function (err, row) {
+            if (err) {
+                callback(err);
+                return;
+            }
+            if (!row) {
+                callback(null, info);
+                return;
+            }
 
             // @TODO this breaks a little at zoom level zero
             var urTile = sm.bbox(row.maxx, row.maxy, info.minzoom, true);
@@ -213,7 +220,7 @@ function updateInfo(mbtiles, name, info, callback) {
             ];
             info.name = info.description = info.basename = name;
 
-            for(var i = 0; i < numLayers; i++) {
+            for (var i = 0; i < numLayers; i++) {
                 info.vector_layers[i].fields = {};
             }
 

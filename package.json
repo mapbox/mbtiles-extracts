@@ -12,16 +12,16 @@
   "author": "Vladimir Agafonkin",
   "license": "ISC",
   "dependencies": {
-    "mbtiles": "^0.8.2",
+    "@mapbox/sphericalmercator": "^1.0.5",
+    "mbtiles": "^0.9.0",
     "mkdirp": "^0.5.1",
-    "queue-async": "^1.0.7",
-    "sphericalmercator": "^1.0.4",
+    "queue-async": "^1.2.1",
     "split": "^1.0.0",
-    "which-polygon": "^2.0.0"
+    "which-polygon": "^2.1.0"
   },
   "devDependencies": {
-    "eslint": "^1.9.0",
-    "eslint-config-mourner": "^1.0.1"
+    "eslint": "^3.16.1",
+    "eslint-config-mourner": "^2.0.1"
   },
   "eslintConfig": {
     "extends": "mourner"

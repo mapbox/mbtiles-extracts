@@ -2,12 +2,12 @@
 
 module.exports = extract;
 
-var MBTiles = require('mbtiles');
+var MBTiles = require('@mapbox/mbtiles');
 var split = require('split');
 var whichPoly = require('which-polygon');
 var queue = require('queue-async');
 var path = require('path');
-var SphericalMercator = require('sphericalmercator');
+var SphericalMercator = require('@mapbox/sphericalmercator');
 var mkdirp = require('mkdirp');
 
 var sm = new SphericalMercator();

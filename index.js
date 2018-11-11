@@ -54,6 +54,9 @@ function extract(mbTilesPath, geojson, propName) {
                 zxyStream.pause();
                 paused = true;
             }
+            var tileBBox = [unproject(z, x, y)[0], unproject(z, x+1, y+1)[1],
+                        unproject(z, x + 1, y + 1)[0], unproject(z, x, y)[1]];
+            var result = query.bbox(tileBBox, true);
 
             var result = query(unproject(z, x + 0.5, y + 0.5));
 

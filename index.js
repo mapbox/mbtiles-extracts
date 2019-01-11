@@ -9,12 +9,10 @@ var queue = require('queue-async');
 var path = require('path');
 var SphericalMercator = require('@mapbox/sphericalmercator');
 var mkdirp = require('mkdirp');
-
 var sm = new SphericalMercator();
 
 function extract(mbTilesPath, geojson, propName) {
     if (!propName) throw new Error('Property name to extract by not provided.');
-
     var query = whichPoly(geojson);
     var tilesGot = 0;
     var tilesDone = 0;
@@ -54,32 +52,36 @@ function extract(mbTilesPath, geojson, propName) {
                 zxyStream.pause();
                 paused = true;
             }
+            var tileBBox = [unproject(z, x, y)[0], unproject(z, x+1, y+1)[1],
+                        unproject(z, x + 1, y + 1)[0], unproject(z, x, y)[1]];
+            var result = query.bbox(tileBBox, true);
 
-            var result = query(unproject(z, x + 0.5, y + 0.5));
-
-            if (!result) {
+            if (!result.length) {
                 process.nextTick(tileSaved);
             } else {
-                var extractName = toFileName(result[propName]);
+                if (result.length > 1) tilesGot += result.length - 1;
+                result.forEach((r) => {
+                  var extractName = toFileName(r[propName]);
 
-                if (extracts[extractName] && writable[extractName]) {
-                    saveTile(extracts[extractName], z, x, y);
+                  if (extracts[extractName] && writable[extractName]) {
+                      saveTile(extracts[extractName], z, x, y);
 
-                } else {
+                  } else {
 
-                    writeQueue[extractName] = writeQueue[extractName] || [];
-                    writeQueue[extractName].push([z, x, y]);
+                      writeQueue[extractName] = writeQueue[extractName] || [];
+                      writeQueue[extractName].push([z, x, y]);
 
-                    if (!extracts[extractName]) {
-                        writeExtract(extractName, function () {
-                            writable[extractName] = true;
-                            while (writeQueue[extractName].length) {
-                                var t = writeQueue[extractName].pop();
-                                saveTile(extracts[extractName], t[0], t[1], t[2]);
-                            }
-                        });
-                    }
-                }
+                      if (!extracts[extractName]) {
+                          writeExtract(extractName, function () {
+                              writable[extractName] = true;
+                              while (writeQueue[extractName].length) {
+                                  var t = writeQueue[extractName].pop();
+                                  saveTile(extracts[extractName], t[0], t[1], t[2]);
+                              }
+                          });
+                      }
+                  }
+                });
             }
         }
 
